@@ -236,6 +236,7 @@ void StartDefaultTask(void *argument)
   /* Infinite loop */
   while(1)
   {
+	  printf("task 1 is running\n");
 	  HAL_GPIO_TogglePin(gled_GPIO_Port, gled_Pin);
 	  HAL_Delay(500);
   }
@@ -255,6 +256,7 @@ void StartTask02(void *argument)
   /* Infinite loop */
   while(1)
   {
+	  printf("task2 is running\n");
 	  HAL_GPIO_TogglePin(rled_GPIO_Port, rled_Pin);
 	  vTaskDelay(100);
   }
