@@ -21,7 +21,6 @@
 #include "main.h"
 #include "cmsis_os.h"
 
-
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "queue.h"
@@ -56,7 +55,14 @@ osThreadId_t myTask02Handle;
 const osThreadAttr_t myTask02_attributes = {
   .name = "myTask02",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityHigh,
+  .priority = (osPriority_t) osPriorityLow,
+};
+/* Definitions for myTask03 */
+osThreadId_t myTask03Handle;
+const osThreadAttr_t myTask03_attributes = {
+  .name = "myTask03",
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityLow,
 };
 /* USER CODE BEGIN PV */
 
@@ -67,6 +73,7 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 void StartDefaultTask(void *argument);
 void StartTask02(void *argument);
+void StartTask03(void *argument);
 
 /* USER CODE BEGIN PFP */
 QueueHandle_t xQueue;
@@ -129,17 +136,15 @@ xQueue=xQueueCreate(5,sizeof(int32_t));
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-
   /* creation of defaultTask */
-  if(xQueue != NULL)
-  {
-
-
+  if(xQueue != NULL){
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* creation of myTask02 */
   myTask02Handle = osThreadNew(StartTask02, NULL, &myTask02_attributes);
-  }
+
+  /* creation of myTask03 */
+  myTask03Handle = osThreadNew(StartTask03, NULL, &myTask03_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -151,7 +156,7 @@ xQueue=xQueueCreate(5,sizeof(int32_t));
 
   /* Start scheduler */
   osKernelStart();
-
+  }
   /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -241,15 +246,15 @@ static void MX_GPIO_Init(void)
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
-	int data=0;
+	int receivedData;
   /* Infinite loop */
   while(1)
   {
-	  xQueueSend(xQueue,&data,0);
-	  printf("data is sent%d\n",data);
-	  data++;
-	  HAL_GPIO_TogglePin(gled_GPIO_Port, gled_Pin);
-	  HAL_Delay(500);
+	  if(xQueueReceive(xQueue,&receivedData,portMAX_DELAY)==pdTRUE)
+	  {
+		  printf("\r\n received data %d\r\n",receivedData);
+	  }
+//	  vTaskDelay(1000);
 
   }
   /* USER CODE END 5 */
@@ -265,18 +270,43 @@ void StartDefaultTask(void *argument)
 void StartTask02(void *argument)
 {
   /* USER CODE BEGIN StartTask02 */
-	int receivedData;
+	int data=0;
   /* Infinite loop */
   while(1)
   {
-	  HAL_GPIO_TogglePin(rled_GPIO_Port, rled_Pin);
-	  vTaskDelay(100);
-	  if(xQueueReceive(xQueue,&receivedData,portMAX_DELAY)==pdTRUE)
+	  if(xQueueSend(xQueue,&data,100) == pdTRUE)
 	  {
-		  printf("received data is %d\n",receivedData);
+		  printf("\r\n data sent from sender1 is %d\r\n",data);
+	  	  data++;
 	  }
+	  vTaskDelay(1000);
+
   }
   /* USER CODE END StartTask02 */
+}
+
+/* USER CODE BEGIN Header_StartTask03 */
+/**
+* @brief Function implementing the myTask03 thread.
+* @param argument: Not used
+* @retval None
+*/
+/* USER CODE END Header_StartTask03 */
+void StartTask03(void *argument)
+{
+  /* USER CODE BEGIN StartTask03 */
+	int data=100;
+  /* Infinite loop */
+  while(1)
+  {
+	  if(xQueueSend(xQueue,&data,100) == pdTRUE)
+	  {
+	  	  printf("data sent from sender2 is %d\r\n",data);
+	  	  data+=10;
+	  }
+	  vTaskDelay(1000);
+  }
+  /* USER CODE END StartTask03 */
 }
 
 /**
