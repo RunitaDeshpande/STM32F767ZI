@@ -21,9 +21,11 @@
 #include "main.h"
 #include "cmsis_os.h"
 
+
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "queue.h"
+#include<stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -47,7 +49,7 @@ osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
   .name = "defaultTask",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
+  .priority = (osPriority_t) osPriorityLow,
 };
 /* Definitions for myTask02 */
 osThreadId_t myTask02Handle;
@@ -67,7 +69,7 @@ void StartDefaultTask(void *argument);
 void StartTask02(void *argument);
 
 /* USER CODE BEGIN PFP */
-
+QueueHandle_t xQueue;
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -82,7 +84,7 @@ void StartTask02(void *argument);
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-
+xQueue=xQueueCreate(5,sizeof(int32_t));
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -127,11 +129,17 @@ int main(void)
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
+
   /* creation of defaultTask */
+  if(xQueue != NULL)
+  {
+
+
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* creation of myTask02 */
   myTask02Handle = osThreadNew(StartTask02, NULL, &myTask02_attributes);
+  }
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -233,11 +241,16 @@ static void MX_GPIO_Init(void)
 void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
+	int data=0;
   /* Infinite loop */
   while(1)
   {
+	  xQueueSend(xQueue,&data,0);
+	  printf("data is sent%d\n",data);
+	  data++;
 	  HAL_GPIO_TogglePin(gled_GPIO_Port, gled_Pin);
 	  HAL_Delay(500);
+
   }
   /* USER CODE END 5 */
 }
@@ -252,11 +265,16 @@ void StartDefaultTask(void *argument)
 void StartTask02(void *argument)
 {
   /* USER CODE BEGIN StartTask02 */
+	int receivedData;
   /* Infinite loop */
   while(1)
   {
 	  HAL_GPIO_TogglePin(rled_GPIO_Port, rled_Pin);
 	  vTaskDelay(100);
+	  if(xQueueReceive(xQueue,&receivedData,portMAX_DELAY)==pdTRUE)
+	  {
+		  printf("received data is %d\n",receivedData);
+	  }
   }
   /* USER CODE END StartTask02 */
 }

@@ -65,8 +65,8 @@ all: main-build
 main-build: Task02.elf secondary-outputs
 
 # Tool invocations
-Task02.elf: $(OBJS) $(USER_OBJS) C:\Users\158224\Desktop\MCU_2\Task02\STM32F767ZITX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "Task02.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m7 -T"C:\Users\158224\Desktop\MCU_2\Task02\STM32F767ZITX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Task02.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv5-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+Task02.elf: $(OBJS) $(USER_OBJS) C:\Users\158224\Desktop\MCU_2\Task02\STM32F767ZI\STM32F767ZITX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "Task02.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m7 -T"C:\Users\158224\Desktop\MCU_2\Task02\STM32F767ZI\STM32F767ZITX_FLASH.ld" --specs=nosys.specs -Wl,-Map="Task02.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv5-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 
