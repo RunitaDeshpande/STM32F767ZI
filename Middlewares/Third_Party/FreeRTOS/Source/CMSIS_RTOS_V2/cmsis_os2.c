@@ -1,5 +1,5 @@
 /* --------------------------------------------------------------------------
- * Portions Copyright ï¿½ 2019 STMicroelectronics International N.V. All rights reserved.
+ * Portions Copyright © 2019 STMicroelectronics International N.V. All rights reserved.
  * Copyright (c) 2013-2019 Arm Limited. All rights reserved.
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -403,8 +403,7 @@ uint32_t osKernelGetSysTimerFreq (void) {
 
 /*---------------------------------------------------------------------------*/
 
-osThreadId_t osThreadNew (osThreadFunc_t func, void *argument, const osThreadAttr_t *attr)
-{
+osThreadId_t osThreadNew (osThreadFunc_t func, void *argument, const osThreadAttr_t *attr) {
   const char *name;
   uint32_t stack;
   TaskHandle_t hTask;

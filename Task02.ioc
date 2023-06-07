@@ -1,7 +1,7 @@
 #MicroXplorer Configuration settings - do not modify
 FREERTOS.FootprintOK=true
 FREERTOS.IPParameters=Tasks01,FootprintOK
-FREERTOS.Tasks01=ReceiverTask,24,128,StartReceiverTask,Default,NULL,Dynamic,NULL,NULL;Sender01,40,128,StartSender01,Default,NULL,Dynamic,NULL,NULL;Sender02,8,128,StartSender02,Default,NULL,Dynamic,NULL,NULL
+FREERTOS.Tasks01=ReceiverTask,24,128,StartReceiverTask,Default,NULL,Dynamic,NULL,NULL;Sender01,40,128,StartSender01,Default,NULL,Dynamic,NULL,NULL
 File.Version=6
 KeepUserPlacement=false
 Mcu.Family=STM32F7

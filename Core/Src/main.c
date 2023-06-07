@@ -57,13 +57,6 @@ const osThreadAttr_t Sender01_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityHigh,
 };
-/* Definitions for Sender02 */
-osThreadId_t Sender02Handle;
-const osThreadAttr_t Sender02_attributes = {
-  .name = "Sender02",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityHigh,
-};
 /* USER CODE BEGIN PV */
 
 /* USER CODE END PV */
@@ -73,41 +66,21 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 void StartReceiverTask(void *argument);
 void StartSender01(void *argument);
-void StartSender02(void *argument);
 
 /* USER CODE BEGIN PFP */
-QueueHandle_t xQueue;
+QueueHandle_t xPointerQueue;
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-typedef enum
-{
-eSender1,
-eSender2
-} DataSource_t;
-
-typedef struct
-{
-	int ucValue;
-	DataSource_t eDataSource;
-
-} Data_t;
-
-static const Data_t xStructsToSend[ 2 ] =
-{
-{ 100, eSender1 }, /* Used by Sender1. */
-{ 200, eSender2 } /* Used by Sender2. */
-};
 
 
 /* USER CODE END 0 */
 
 /**
-* @brief  The application entry point.
-* @retval int
-*/
-
+  * @brief  The application entry point.
+  * @retval int
+  */
 int main(void)
 {
   /* USER CODE BEGIN 1 */
@@ -154,24 +127,20 @@ int main(void)
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
 
-  xQueue = xQueueCreate(3, sizeof(Data_t));
+  xPointerQueue = xQueueCreate( 5, sizeof( char * ) );
 
   /* USER CODE END RTOS_QUEUES */
+
   /* Create the thread(s) */
   /* creation of ReceiverTask */
-
   ReceiverTaskHandle = osThreadNew(StartReceiverTask, NULL, &ReceiverTask_attributes);
 
   /* creation of Sender01 */
-  Sender01Handle = osThreadNew(StartSender01, &(xStructsToSend[ 0 ]), &Sender01_attributes);
-
-  /* creation of Sender02 */
-  Sender02Handle = osThreadNew(StartSender02, &(xStructsToSend[ 1 ]), &Sender02_attributes);
+  Sender01Handle = osThreadNew(StartSender01, NULL, &Sender01_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
-
 
   /* USER CODE BEGIN RTOS_EVENTS */
   /* add events, ... */
@@ -239,8 +208,7 @@ void SystemClock_Config(void)
   */
 static void MX_GPIO_Init(void)
 {
-
-	GPIO_InitTypeDef GPIO_InitStruct = {0};
+  GPIO_InitTypeDef GPIO_InitStruct = {0};
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOB_CLK_ENABLE();
@@ -270,39 +238,18 @@ static void MX_GPIO_Init(void)
 /* USER CODE END Header_StartReceiverTask */
 void StartReceiverTask(void *argument)
 {
-	Data_t xReceivedStructure;
-	BaseType_t xStatus;
-	/* This task is also defined within an infinite loop. */
-	for( ;; )
-	{
-
-	if( uxQueueMessagesWaiting( xQueue ) == 3 )
-	{
-	printf( "Queue is full!\r\n" );
-	}
-
-	xStatus = xQueueReceive( xQueue, &xReceivedStructure, 100);
-	if( xStatus == pdPASS )
-	{
-	/* Data was successfully received from the queue, print out the received
-	value and the source of the value. */
-	  if( xReceivedStructure.eDataSource == eSender1 )
-	  {
-	  printf( "From Sender 1 = %d\n", xReceivedStructure.ucValue );
-	  }
-	  else
-	  {
-	  printf( "From Sender 2 = %d\n", xReceivedStructure.ucValue );
-	  }
-	}
-	else
-	{
-	/* Nothing was received from the queue. This must be an error as this
-	task should only run when the queue is full. */
-	printf( "Could not receive from the queue.\r\n" );
-	}
-	vTaskDelay(5);
-	}
+  /* USER CODE BEGIN 5 */
+	char *pcReceivedString;
+  /* Infinite loop */
+  while(1)
+  {
+	  xQueueReceive( xPointerQueue,&pcReceivedString,portMAX_DELAY );
+	  /* The buffer holds a string, print it out. */
+	  printf("\r received the string: %s",pcReceivedString);
+	  /* The buffer is not required any more - release it so it can be freed, or re-used. */
+	 // prvReleaseBuffer( pcReceivedString );
+  }
+  /* USER CODE END 5 */
 }
 
 /* USER CODE BEGIN Header_StartSender01 */
@@ -315,57 +262,22 @@ void StartReceiverTask(void *argument)
 /* USER CODE END Header_StartSender01 */
 void StartSender01(void *argument)
 {
- /* USER CODE BEGIN StartSender01 */
- BaseType_t xStatus;
- const TickType_t xTicksToWait = pdMS_TO_TICKS(100);
+  /* USER CODE BEGIN StartSender01 */
 
+	char *pcStringToSend;
+    const size_t xMaxStringLength = 50;
+    char buff[50];
  /* Infinite loop */
- for(;;)
-	{
-		xStatus=xQueueSendToBack(xQueue,argument,xTicksToWait);
+ while(1)
+ {
+	 pcStringToSend = ( char * ) buff;
+	 snprintf( pcStringToSend, xMaxStringLength, "hello from sender\r\n");
 
-		if(xStatus != pdPASS)
-		{
-			printf("could not send to the Queue\n");
-		}
-		else
-		{
-			printf("\r Send pass \r\n");
-			vTaskDelay(pdMS_TO_TICKS(10));
-		}
-	}
+	 xQueueSend( xPointerQueue,&pcStringToSend,portMAX_DELAY );
+	 vTaskDelay(1000);
+ }
   /* USER CODE END StartSender01 */
 }
-
-/* USER CODE BEGIN Header_StartSender02 */
-/**
-* @brief Function implementing the Sender02 thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_StartSender02 */
-void StartSender02(void *argument)
-{
-	/* USER CODE BEGIN StartSender01 */
-	BaseType_t xStatus;
-	 const TickType_t xTicksToWait =pdMS_TO_TICKS(100);
-	  /* Infinite loop */
-	for(;;)
-	{
-		xStatus=xQueueSendToBack(xQueue,argument,xTicksToWait);
-		if(xStatus != pdPASS)
-		{
-			printf("could not send to the Queue\n");
-
-		}
-		else
-		{
-			printf("\r Send pass \r\n");
-			vTaskDelay(pdMS_TO_TICKS(10));
-		}
-	}
-}
-
 
 /**
   * @brief  This function is executed in case of error occurrence.
