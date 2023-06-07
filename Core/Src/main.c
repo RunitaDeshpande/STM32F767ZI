@@ -23,7 +23,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "queue.h"
+#include<stdio.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -42,17 +43,17 @@
 
 /* Private variables ---------------------------------------------------------*/
 
-/* Definitions for defaultTask */
-osThreadId_t defaultTaskHandle;
-const osThreadAttr_t defaultTask_attributes = {
-  .name = "defaultTask",
+/* Definitions for ReceiverTask */
+osThreadId_t ReceiverTaskHandle;
+const osThreadAttr_t ReceiverTask_attributes = {
+  .name = "ReceiverTask",
   .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
+  .priority = (osPriority_t) osPriorityLow,
 };
-/* Definitions for myTask02 */
-osThreadId_t myTask02Handle;
-const osThreadAttr_t myTask02_attributes = {
-  .name = "myTask02",
+/* Definitions for Sender01 */
+osThreadId_t Sender01Handle;
+const osThreadAttr_t Sender01_attributes = {
+  .name = "Sender01",
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityHigh,
 };
@@ -63,15 +64,16 @@ const osThreadAttr_t myTask02_attributes = {
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-void StartDefaultTask(void *argument);
-void StartTask02(void *argument);
+void StartReceiverTask(void *argument);
+void StartSender01(void *argument);
 
 /* USER CODE BEGIN PFP */
-
+QueueHandle_t xPointerQueue;
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
 
 /* USER CODE END 0 */
 
@@ -124,14 +126,17 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
+
+  xPointerQueue = xQueueCreate( 5, sizeof( char * ) );
+
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+  /* creation of ReceiverTask */
+  ReceiverTaskHandle = osThreadNew(StartReceiverTask, NULL, &ReceiverTask_attributes);
 
-  /* creation of myTask02 */
-  myTask02Handle = osThreadNew(StartTask02, NULL, &myTask02_attributes);
+  /* creation of Sender01 */
+  Sender01Handle = osThreadNew(StartSender01, NULL, &Sender01_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -147,6 +152,7 @@ int main(void)
   /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+
   while (1)
   {
     /* USER CODE END WHILE */
@@ -223,42 +229,54 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE END 4 */
 
-/* USER CODE BEGIN Header_StartDefaultTask */
+/* USER CODE BEGIN Header_StartReceiverTask */
 /**
-  * @brief  Function implementing the defaultTask thread.
+  * @brief  Function implementing the ReceiverTask thread.
   * @param  argument: Not used
   * @retval None
   */
-/* USER CODE END Header_StartDefaultTask */
-void StartDefaultTask(void *argument)
+/* USER CODE END Header_StartReceiverTask */
+void StartReceiverTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
+	char *pcReceivedString;
   /* Infinite loop */
   while(1)
   {
-	  HAL_GPIO_TogglePin(gled_GPIO_Port, gled_Pin);
-	  HAL_Delay(500);
+	  xQueueReceive( xPointerQueue,&pcReceivedString,portMAX_DELAY );
+	  /* The buffer holds a string, print it out. */
+	  printf("\r received the string: %s",pcReceivedString);
+	  /* The buffer is not required any more - release it so it can be freed, or re-used. */
+	 // prvReleaseBuffer( pcReceivedString );
   }
   /* USER CODE END 5 */
 }
 
-/* USER CODE BEGIN Header_StartTask02 */
+/* USER CODE BEGIN Header_StartSender01 */
 /**
-* @brief Function implementing the myTask02 thread.
+* @brief Function implementing the Sender01 thread.
 * @param argument: Not used
 * @retval None
 */
-/* USER CODE END Header_StartTask02 */
-void StartTask02(void *argument)
+
+/* USER CODE END Header_StartSender01 */
+void StartSender01(void *argument)
 {
-  /* USER CODE BEGIN StartTask02 */
-  /* Infinite loop */
-  while(1)
-  {
-	  HAL_GPIO_TogglePin(rled_GPIO_Port, rled_Pin);
-	  vTaskDelay(100);
-  }
-  /* USER CODE END StartTask02 */
+  /* USER CODE BEGIN StartSender01 */
+
+	char *pcStringToSend;
+    const size_t xMaxStringLength = 50;
+    char buff[50];
+ /* Infinite loop */
+ while(1)
+ {
+	 pcStringToSend = ( char * ) buff;
+	 snprintf( pcStringToSend, xMaxStringLength, "hello from sender\r\n");
+
+	 xQueueSend( xPointerQueue,&pcStringToSend,portMAX_DELAY );
+	 vTaskDelay(1000);
+ }
+  /* USER CODE END StartSender01 */
 }
 
 /**
