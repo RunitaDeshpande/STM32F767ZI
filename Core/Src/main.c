@@ -255,23 +255,36 @@ void vTimerCallback(TimerHandle_t pxTimer)
 static void prvOneShotTimerCallback( TimerHandle_t xTimer )
 {
 TickType_t xTimeNow;
+
+uint32_t ulExecutionCount;
+
+ulExecutionCount = ( uint32_t ) pvTimerGetTimerID( xTimer );
+ulExecutionCount++;
+vTimerSetTimerID( xTimer, ( void * ) ulExecutionCount );
 /* Obtain the current tick count. */
 xTimeNow = xTaskGetTickCount();
 /* Output a string to show the time at which the callback was executed. */
-printf( "One-shot timer callback executing %d \n", xTimeNow );
-/* File scope variable. */
-//  ulCallCount++;
+printf( "One-shot timer callback executing %d\r \n", xTimeNow );
+
 }
 
 
 static void prvAutoReloadTimerCallback( TimerHandle_t xTimer )
 {
 TickType_t xTimeNow;
+uint32_t ulExecutionCount;
+
+ulExecutionCount = ( uint32_t ) pvTimerGetTimerID( xTimer );
+ulExecutionCount++;
+vTimerSetTimerID( xTimer, ( void * ) ulExecutionCount );
 /* Obtain the current tick count. */
 xTimeNow = xTaskGetTickCount();
-/* Output a string to show the time at which the callback was executed. */
-printf( "Auto-reload timer callback executing %d \n", xTimeNow );
-  //ulCallCount++;
+
+printf("Auto-reload timer callback executing %d\r\n", xTimeNow );
+	if( ulExecutionCount == 5 )
+	{
+		xTimerStop( xTimer, 0 );
+	}
 }
 
 /* USER CODE BEGIN Header_StartDefaultTask */
