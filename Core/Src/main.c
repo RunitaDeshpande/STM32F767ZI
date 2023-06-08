@@ -256,6 +256,7 @@ static void prvOneShotTimerCallback( TimerHandle_t xTimer )
 {
 TickType_t xTimeNow;
 
+
 uint32_t ulExecutionCount;
 
 ulExecutionCount = ( uint32_t ) pvTimerGetTimerID( xTimer );
@@ -265,13 +266,13 @@ vTimerSetTimerID( xTimer, ( void * ) ulExecutionCount );
 xTimeNow = xTaskGetTickCount();
 /* Output a string to show the time at which the callback was executed. */
 printf( "One-shot timer callback executing %d\r \n", xTimeNow );
-
 }
 
 
 static void prvAutoReloadTimerCallback( TimerHandle_t xTimer )
 {
 TickType_t xTimeNow;
+
 uint32_t ulExecutionCount;
 
 ulExecutionCount = ( uint32_t ) pvTimerGetTimerID( xTimer );
@@ -285,6 +286,9 @@ printf("Auto-reload timer callback executing %d\r\n", xTimeNow );
 	{
 		xTimerStop( xTimer, 0 );
 	}
+	xTimeNow = xTaskGetTickCount();
+/* Output a string to show the time at which the callback was executed. */
+
 }
 
 /* USER CODE BEGIN Header_StartDefaultTask */
