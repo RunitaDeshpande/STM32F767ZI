@@ -1,7 +1,7 @@
 tasks.c:578:15:xTaskCreateStatic	64	static,ignoring_inline_asm
 tasks.c:730:13:xTaskCreate	56	static
 tasks.c:821:13:prvInitialiseNewTask	40	static,ignoring_inline_asm
-tasks.c:1072:13:prvAddNewTaskToReadyList	16	static,ignoring_inline_asm
+tasks.c:1072:13:prvAddNewTaskToReadyList	16	static
 tasks.c:1157:7:vTaskDelete	24	static,ignoring_inline_asm
 tasks.c:1249:7:vTaskDelayUntil	48	static,ignoring_inline_asm
 tasks.c:1333:7:vTaskDelay	24	static,ignoring_inline_asm

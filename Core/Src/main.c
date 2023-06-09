@@ -20,7 +20,7 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "cmsis_os.h"
-
+#include <stdio.h>
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -72,7 +72,12 @@ void StartTask02(void *argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+struct user
+{
+	int u_id;
+	char name[10];
+};
+struct user user1={1,"Runita"};
 /* USER CODE END 0 */
 
 /**
@@ -131,7 +136,7 @@ int main(void)
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* creation of myTask02 */
-  myTask02Handle = osThreadNew(StartTask02, NULL, &myTask02_attributes);
+  myTask02Handle = osThreadNew(StartTask02, (void*)&user1, &myTask02_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -236,6 +241,7 @@ void StartDefaultTask(void *argument)
   /* Infinite loop */
   while(1)
   {
+	  printf("task 1 is running\n");
 	  HAL_GPIO_TogglePin(gled_GPIO_Port, gled_Pin);
 	  HAL_Delay(500);
   }
@@ -252,12 +258,18 @@ void StartDefaultTask(void *argument)
 void StartTask02(void *argument)
 {
   /* USER CODE BEGIN StartTask02 */
-  /* Infinite loop */
-  while(1)
-  {
+
+	struct user *user1= (struct user*) argument;
+	  /* Infinite loop */
+		while(1)
+		{
+	  printf("task02 is running\n");
 	  HAL_GPIO_TogglePin(rled_GPIO_Port, rled_Pin);
-	  vTaskDelay(100);
-  }
+	  HAL_Delay(1000);
+
+	  printf("user id is %d\n",user1->u_id);
+	  printf("user name is %s\n",user1->name);
+		}
   /* USER CODE END StartTask02 */
 }
 
