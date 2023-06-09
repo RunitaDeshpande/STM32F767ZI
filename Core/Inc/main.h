@@ -60,8 +60,8 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define gled_Pin GPIO_PIN_0
 #define gled_GPIO_Port GPIOB
-#define rled_Pin GPIO_PIN_14
-#define rled_GPIO_Port GPIOB
+#define r_led_Pin GPIO_PIN_14
+#define r_led_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
