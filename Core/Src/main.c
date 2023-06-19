@@ -20,6 +20,8 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "cmsis_os.h"
+#include "timers.h"
+#include "FreeRTOS.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -33,6 +35,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define mainAUTO_RELOAD_TIMER_PERIOD pdMS_TO_TICKS( 100 )
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -56,16 +59,21 @@ int count =0;
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 void StartDefaultTask(void *argument);
+
 void MX_GPIO_Init(void);
+void  vPeriodicTask(void *argument);
+static void prvAutoReloadTimerCallback( TimerHandle_t xTimer );
+
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+/*
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
  {
-   /* Prevent unused argument(s) compilation warning */
+    Prevent unused argument(s) compilation warning
    UNUSED(GPIO_Pin);
 
 
@@ -76,6 +84,8 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
    	  }
      }
  }
+*/
+
 
 /* USER CODE END 0 */
 
@@ -111,7 +121,7 @@ int main(void)
   /* USER CODE END 2 */
 
   /* Init scheduler */
- // osKernelInitialize();
+   osKernelInitialize();
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
@@ -123,6 +133,7 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_TIMERS */
   /* start timers, add new ones, ... */
+
   /* USER CODE END RTOS_TIMERS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
@@ -135,6 +146,12 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
+  BaseType_t status;
+
+      const UBaseType_t ulPeriodicTaskPriority = configTIMER_TASK_PRIORITY - 1;
+
+      status = xTaskCreate( vPeriodicTask, "Task1", 500, NULL, ulPeriodicTaskPriority, NULL);
+      configASSERT(status == pdPASS);
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -142,7 +159,7 @@ int main(void)
   /* USER CODE END RTOS_EVENTS */
 
   /* Start scheduler */
- // osKernelStart();
+    osKernelStart();
 
   /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
@@ -217,13 +234,64 @@ void MX_GPIO_Init(void)
 
 	   /* Configure user button (PC13) as external interrupt */
 	   GPIO_InitStruct.Pin = GPIO_PIN_13;
-	   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;  // Set interrupt mode as falling edge
+	   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;  // Set interrupt mode as rising edge
 	   GPIO_InitStruct.Pull = GPIO_NOPULL;
 	   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
 	   /* Enable interrupt for PC13 in NVIC */
 	   HAL_NVIC_SetPriority(EXTI15_10_IRQn,0 , 0);
 	   HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
+}
+
+
+void  vPeriodicTask(void *argument)
+{
+	TimerHandle_t xAutoReloadTimer;
+	//BaseType_t xTimer1Started;
+	//printf("Task1\n");
+	xAutoReloadTimer = xTimerCreate( "AutoReload", mainAUTO_RELOAD_TIMER_PERIOD, pdTRUE,0,  prvAutoReloadTimerCallback );
+	 /* Check the software timers were created. */
+	 if(  xAutoReloadTimer != NULL  )
+	 {
+	 /* Start the software timers, using a block time of 0 (no block time). The scheduler has
+	 not been started yet so any block time specified here would be ignored anyway. */
+	xTimerStartFromISR( xAutoReloadTimer, 0 );
+	 }
+	 while(1)
+	 {
+
+	 }
+
+}
+
+
+
+static void prvAutoReloadTimerCallback( TimerHandle_t xTimer )
+{
+TickType_t xTimeNow;
+TickType_t buttonPressTime = 0;
+static int count=0;
+    /* Obtain the current tick count. */
+    xTimeNow = xTaskGetTickCount();
+    /* Output a string to show the time at which the callback was executed. */
+ //printf( "Auto-reload timer callback executing %d\n", xTimeNow );
+
+  if(HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13)==1)
+  {
+	 count++;
+	 if(count==10)
+	 {
+            if ((xTimeNow - buttonPressTime) >= pdMS_TO_TICKS(1000))
+             {
+                 HAL_GPIO_TogglePin(GPIOB,GPIO_PIN_0);
+                 buttonPressTime = xTaskGetTickCount();
+             }
+	 }
+  }
+  else
+  {
+	  count=0;
+  }
 }
 /* USER CODE END 4 */
 
