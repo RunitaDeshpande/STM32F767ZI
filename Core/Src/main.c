@@ -20,7 +20,8 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "cmsis_os.h"
-
+#include "queue.h"
+#include "task.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -42,6 +43,8 @@
 
 /* Private variables ---------------------------------------------------------*/
 
+UART_HandleTypeDef huart3;
+
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
@@ -49,23 +52,26 @@ const osThreadAttr_t defaultTask_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
-/* Definitions for myTask02 */
-osThreadId_t myTask02Handle;
-const osThreadAttr_t myTask02_attributes = {
-  .name = "myTask02",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityHigh,
-};
 /* USER CODE BEGIN PV */
-
+uint8_t msg[]="Transmission started\r\n";
+uint8_t rxData;
+uint8_t rptr=0;
+uint8_t tptr=0;
+uint8_t rxBuffer[100]="";
+QueueHandle_t uartQueue;
+//uint8_t msg1[]="Transmission completed\r\n";
+//uint8_t flag=0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_USART3_UART_Init(void);
 void StartDefaultTask(void *argument);
-void StartTask02(void *argument);
-
+//uint8_t receiveUart(void);
+//void transmitUart(uint8_t data);
+//void WriteToBuffer(int data);
+//int Is_BufferFull(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -103,7 +109,11 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_USART3_UART_Init();
   /* USER CODE BEGIN 2 */
+  HAL_UART_Transmit(&huart3,msg, sizeof(msg), 1000);
+  USART3->CR1 |= USART_CR1_RXNEIE;
+//  HAL_UART_Receive_IT(&huart3,&rxData,1);
 
   /* USER CODE END 2 */
 
@@ -124,14 +134,12 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
+  uartQueue = xQueueCreate( 100, sizeof(char));
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
   /* creation of defaultTask */
   defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
-
-  /* creation of myTask02 */
-  myTask02Handle = osThreadNew(StartTask02, NULL, &myTask02_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -149,6 +157,25 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  /*if(flag==1)
+	  {
+
+
+
+		  HAL_UART_Transmit(&huart3, &rxBuffer[tptr],1, 100);
+		  tptr++;
+		  flag=0;
+
+	  }*/
+
+	  /*while(tptr!=rptr)
+	  {
+		  while(!(USART3->ISR & USART_ISR_TXE));// Transmitter is enabled and the ISR bit is raised to check that the transmitter register is empty to take the data
+
+ 	      USART3->TDR=rxBuffer[tptr];
+ 	      tptr++;
+	  }
+*/
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -164,6 +191,7 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
 
   /** Configure the main internal regulator output voltage
   */
@@ -193,7 +221,50 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_USART3;
+  PeriphClkInitStruct.Usart3ClockSelection = RCC_USART3CLKSOURCE_PCLK1;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
 }
+
+/**
+  * @brief USART3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART3_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART3_Init 0 */
+
+  /* USER CODE END USART3_Init 0 */
+
+  /* USER CODE BEGIN USART3_Init 1 */
+
+  /* USER CODE END USART3_Init 1 */
+  huart3.Instance = USART3;
+  huart3.Init.BaudRate = 115200;
+  huart3.Init.WordLength = UART_WORDLENGTH_8B;
+  huart3.Init.StopBits = UART_STOPBITS_1;
+  huart3.Init.Parity = UART_PARITY_NONE;
+  huart3.Init.Mode = UART_MODE_TX_RX;
+  huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart3.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart3.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart3.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART3_Init 2 */
+
+
+  /* USER CODE END USART3_Init 2 */
+
+}
+
 
 /**
   * @brief GPIO Initialization Function
@@ -206,6 +277,7 @@ static void MX_GPIO_Init(void)
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, gled_Pin|rled_Pin, GPIO_PIN_RESET);
@@ -220,7 +292,91 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+/*void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+  {
 
+	WriteToBuffer(rxData);
+    flag=1;
+	HAL_UART_Receive_IT(&huart3,&rxData,1);
+	if(HAL_UART_Receive_IT(&huart3,&rxData,1)!=HAL_OK)
+	{
+		HAL_UART_Transmit(&huart3, msg1, sizeof(msg1), 100);
+	}
+	else{
+
+	}
+
+  }*/
+
+/*void WriteToBuffer(int data){
+
+        if(tptr == -1 )
+        tptr =0;
+
+        rptr=rptr+1;
+        rxBuffer[rptr]= data;
+
+}*/
+
+/* void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
+{
+
+//   Prevent unused argument(s) compilation warning
+  UNUSED(huart);
+ rxindex++;
+ // HAL_UART_Receive_IT(&huart3,&rxData ,1);
+  HAL_UART_Receive_IT(&huart3,&rxBuffer[rxindex] , 1);
+
+}*/
+/**
+  * @brief Receive Function: used to receive the data from the terminal
+  * @param None
+  * @retval 1: on  receive success
+  * @retval 0: on failure
+  */
+/*uint8_t receiveUart(void)
+ {
+ 	if(USART3->ISR & USART_ISR_RXNE)// receiver buffer is full and receiver is enabled.
+ 	{
+
+ 		rxData=USART3->RDR;
+ 		return 1;
+ 	}
+
+ 	return 0;
+ }*/
+/*  * @brief Interrupt Handler Function: used as an ISR function for receiver
+    * @param none
+    * @retval none
+*/
+void USART3_IRQHandler(void) {
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE; // Initialize to pdFALSE.
+    // Check if the receive interrupt flag is set
+    if (USART3->ISR & USART_ISR_RXNE) {
+    	xQueueSendFromISR(uartQueue,(uint8_t*) &USART3->RDR, &xHigherPriorityTaskWoken);
+    	if (xHigherPriorityTaskWoken == pdTRUE) {
+    	    // Request a context switch
+    	    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+    	}
+        // Read the received data from the RDR register
+        /*rxBuffer[rptr] = USART3->RDR;
+
+        rptr++;
+        if(rptr>=100)
+        	rptr=0;*/
+    }
+}
+/**
+  * @brief Transmitter Function: used to transmit the data to the terminal
+  * @param data: will get the rxData received from the terminal
+  * @retval none
+  */
+ /*void transmitUart(uint8_t data)
+ {
+ 	while (!(USART3->ISR & USART_ISR_TXE));// Transmitter is enabled and the ISR bit is raised to check that the transmitter register is empty to take the data
+
+ 	USART3->TDR=data;
+ }*/
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */
@@ -234,31 +390,16 @@ void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
   /* Infinite loop */
-  while(1)
-  {
-	  HAL_GPIO_TogglePin(gled_GPIO_Port, gled_Pin);
-	  HAL_Delay(500);
-  }
-  /* USER CODE END 5 */
-}
+  while(1){
 
-/* USER CODE BEGIN Header_StartTask02 */
-/**
-* @brief Function implementing the myTask02 thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_StartTask02 */
-void StartTask02(void *argument)
-{
-  /* USER CODE BEGIN StartTask02 */
-  /* Infinite loop */
-  while(1)
-  {
-	  HAL_GPIO_TogglePin(rled_GPIO_Port, rled_Pin);
-	  vTaskDelay(100);
+	  if (xQueueReceive(uartQueue, &rxData, 0) == pdTRUE)
+	  		{
+	  			while (!(USART3->ISR & USART_ISR_TXE));
+	  			USART3->TDR = rxData;
+	  		}
   }
-  /* USER CODE END StartTask02 */
+
+  /* USER CODE END 5 */
 }
 
 /**
