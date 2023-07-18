@@ -20,7 +20,8 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "cmsis_os.h"
-
+#include "queue.h"
+#include "task.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -57,6 +58,7 @@ uint8_t rxData;
 uint8_t rptr=0;
 uint8_t tptr=0;
 uint8_t rxBuffer[100]="";
+QueueHandle_t uartQueue;
 //uint8_t msg1[]="Transmission completed\r\n";
 //uint8_t flag=0;
 /* USER CODE END PV */
@@ -116,7 +118,7 @@ int main(void)
   /* USER CODE END 2 */
 
   /* Init scheduler */
- // osKernelInitialize();
+  osKernelInitialize();
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
@@ -132,11 +134,12 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_QUEUES */
   /* add queues, ... */
+  uartQueue = xQueueCreate( 100, sizeof(char));
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
   /* creation of defaultTask */
- // defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -147,7 +150,7 @@ int main(void)
   /* USER CODE END RTOS_EVENTS */
 
   /* Start scheduler */
-  //osKernelStart();
+  osKernelStart();
 
   /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
@@ -165,14 +168,14 @@ int main(void)
 
 	  }*/
 
-	  while(tptr!=rptr)
+	  /*while(tptr!=rptr)
 	  {
 		  while(!(USART3->ISR & USART_ISR_TXE));// Transmitter is enabled and the ISR bit is raised to check that the transmitter register is empty to take the data
 
  	      USART3->TDR=rxBuffer[tptr];
  	      tptr++;
 	  }
-
+*/
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -347,14 +350,20 @@ static void MX_GPIO_Init(void)
     * @retval none
 */
 void USART3_IRQHandler(void) {
+	BaseType_t xHigherPriorityTaskWoken = pdFALSE; // Initialize to pdFALSE.
     // Check if the receive interrupt flag is set
     if (USART3->ISR & USART_ISR_RXNE) {
+    	xQueueSendFromISR(uartQueue,(uint8_t*) &USART3->RDR, &xHigherPriorityTaskWoken);
+    	if (xHigherPriorityTaskWoken == pdTRUE) {
+    	    // Request a context switch
+    	    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
+    	}
         // Read the received data from the RDR register
-        rxBuffer[rptr] = USART3->RDR;
+        /*rxBuffer[rptr] = USART3->RDR;
 
         rptr++;
         if(rptr>=100)
-        	rptr=0;
+        	rptr=0;*/
     }
 }
 /**
@@ -381,11 +390,15 @@ void StartDefaultTask(void *argument)
 {
   /* USER CODE BEGIN 5 */
   /* Infinite loop */
-  /*while(1)
-  {
-	  HAL_GPIO_TogglePin(gled_GPIO_Port, gled_Pin);
-	  HAL_Delay(500);
-  }*/
+  while(1){
+
+	  if (xQueueReceive(uartQueue, &rxData, 0) == pdTRUE)
+	  		{
+	  			while (!(USART3->ISR & USART_ISR_TXE));
+	  			USART3->TDR = rxData;
+	  		}
+  }
+
   /* USER CODE END 5 */
 }
 
