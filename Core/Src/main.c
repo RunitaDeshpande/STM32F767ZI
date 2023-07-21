@@ -72,7 +72,7 @@ static void MX_RTC_Init(void);
 void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
-void get_time(void);
+void ssd1306_time(void);
 static void prvAutoReloadTimerCallback( TimerHandle_t xTimer );
 /* USER CODE END PFP */
 
@@ -117,7 +117,7 @@ int main(void)
   /* USER CODE END 2 */
 
   /* Init scheduler */
-  osKernelInitialize();
+ // osKernelInitialize();
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
@@ -129,8 +129,8 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_TIMERS */
   /* start timers, add new ones, ... */
-xAutoReloadTimer = xTimerCreate("autotimer", mainAUTO_RELOAD_TIMER_PERIOD, pdTRUE, 0,prvAutoReloadTimerCallback);
-xTimer1Started = xTimerStart( xAutoReloadTimer, 0 );
+//xAutoReloadTimer = xTimerCreate("autotimer", mainAUTO_RELOAD_TIMER_PERIOD, pdTRUE, 0,prvAutoReloadTimerCallback);
+//xTimer1Started = xTimerStart( xAutoReloadTimer, 0 );
   /* USER CODE END RTOS_TIMERS */
 
   /* USER CODE BEGIN RTOS_QUEUES */
@@ -150,14 +150,15 @@ xTimer1Started = xTimerStart( xAutoReloadTimer, 0 );
   /* USER CODE END RTOS_EVENTS */
 
   /* Start scheduler */
-  osKernelStart();
+ // osKernelStart();
 
   /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-
+	  ssd1306_time();
+      HAL_Delay(500);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -375,12 +376,27 @@ static void prvAutoReloadTimerCallback( TimerHandle_t xTimer )
 {
 	/*ssd1306_myname();//function from the tests.h library to display name.
 	get_time();*/
+#ifdef ssd1306_timer
 	ssd1306_myname();
 	count++;
 	ssd1306_count(count);//function from the tests.h library to display the count after 1sec and keep it updated.
-
+#endif
 }
 
+void ssd1306_time(void)
+{
+
+
+	RTC_TimeTypeDef gTime = {0};
+	RTC_DateTypeDef gDate = {0};
+	HAL_RTC_GetTime(&hrtc,&gTime,RTC_FORMAT_BIN);
+	HAL_RTC_GetDate(&hrtc,&gDate,RTC_FORMAT_BIN);
+	snprintf((char*)time, sizeof(time), "%02d:%02d:%02d", gTime.Hours, gTime.Minutes, gTime.Seconds);
+	 ssd1306_Fill(White);
+     ssd1306_SetCursor(2, 36);
+	 ssd1306_WriteString(time, Font_11x18, Black);
+     ssd1306_UpdateScreen();
+}
 /* USER CODE END 4 */
 
 /* USER CODE BEGIN Header_StartDefaultTask */
