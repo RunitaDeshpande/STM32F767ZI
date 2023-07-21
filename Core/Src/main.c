@@ -309,9 +309,9 @@ static void MX_RTC_Init(void)
     Error_Handler();
   }
   sDate.WeekDay = RTC_WEEKDAY_SUNDAY;
-  sDate.Month = RTC_MONTH_DECEMBER;
-  sDate.Date = 0x31;
-  sDate.Year = 0x0;
+  sDate.Month = RTC_MONTH_JULY;
+  sDate.Date = 0x21;
+  sDate.Year = 0x23;
 
   if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BCD) != HAL_OK)
   {
@@ -386,15 +386,21 @@ static void prvAutoReloadTimerCallback( TimerHandle_t xTimer )
 void ssd1306_time(void)
 {
 
-
+	char date[30];
 	RTC_TimeTypeDef gTime = {0};
 	RTC_DateTypeDef gDate = {0};
 	HAL_RTC_GetTime(&hrtc,&gTime,RTC_FORMAT_BIN);
 	HAL_RTC_GetDate(&hrtc,&gDate,RTC_FORMAT_BIN);
 	snprintf((char*)time, sizeof(time), "%02d:%02d:%02d", gTime.Hours, gTime.Minutes, gTime.Seconds);
+	snprintf((char*)date,sizeof(date),"%02d/%02d/%02d",gDate.Date, gDate.Month, gDate.Year);
+
 	 ssd1306_Fill(White);
-     ssd1306_SetCursor(2, 36);
+	 ssd1306_SetCursor(2,0);
+	 ssd1306_WriteString("RUNITA", Font_11x18, Black);
+	 ssd1306_SetCursor(2, 18);
 	 ssd1306_WriteString(time, Font_11x18, Black);
+     ssd1306_SetCursor(2, 36);
+	 ssd1306_WriteString(date, Font_11x18, Black);
      ssd1306_UpdateScreen();
 }
 /* USER CODE END 4 */
