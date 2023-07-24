@@ -25,7 +25,6 @@
 /* USER CODE BEGIN Includes */
 #include"ssd1306.h"
 #include"ssd1306_tests.h"
-#include "timers.h"
 #include "stdio.h"
 /* USER CODE END Includes */
 
@@ -58,10 +57,8 @@ const osThreadAttr_t defaultTask_attributes = {
   .priority = (osPriority_t) osPriorityNormal,
 };
 /* USER CODE BEGIN PV */
-uint16_t count=0;
-TimerHandle_t xAutoReloadTimer;
-BaseType_t xTimer1Started;
 char time[10];
+char alarm[10];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -73,7 +70,6 @@ void StartDefaultTask(void *argument);
 
 /* USER CODE BEGIN PFP */
 void ssd1306_time(void);
-static void prvAutoReloadTimerCallback( TimerHandle_t xTimer );
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -113,11 +109,17 @@ int main(void)
   MX_RTC_Init();
   /* USER CODE BEGIN 2 */
   ssd1306_Init();
+ while(1)
+ {
+	 ssd1306_time();
+	 HAL_Delay(500);
+
+ }
 
   /* USER CODE END 2 */
 
   /* Init scheduler */
- // osKernelInitialize();
+  //osKernelInitialize();
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
@@ -139,7 +141,7 @@ int main(void)
 
   /* Create the thread(s) */
   /* creation of defaultTask */
-  //defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
+  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -150,20 +152,18 @@ int main(void)
   /* USER CODE END RTOS_EVENTS */
 
   /* Start scheduler */
- // osKernelStart();
+  //osKernelStart();
 
   /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  ssd1306_time();
-      HAL_Delay(500);
+
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
   }
-
   /* USER CODE END 3 */
 }
 
@@ -275,6 +275,7 @@ static void MX_RTC_Init(void)
 
   RTC_TimeTypeDef sTime = {0};
   RTC_DateTypeDef sDate = {0};
+  RTC_AlarmTypeDef sAlarm = {0};
 
   /* USER CODE BEGIN RTC_Init 1 */
 
@@ -309,11 +310,27 @@ static void MX_RTC_Init(void)
     Error_Handler();
   }
   sDate.WeekDay = RTC_WEEKDAY_SUNDAY;
-  sDate.Month = RTC_MONTH_JULY;
-  sDate.Date = 0x21;
-  sDate.Year = 0x23;
-
+  sDate.Month = RTC_MONTH_DECEMBER;
+  sDate.Date = 0x31;
+  sDate.Year = 0x0;
   if (HAL_RTC_SetDate(&hrtc, &sDate, RTC_FORMAT_BCD) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Enable the Alarm A
+  */
+  sAlarm.AlarmTime.Hours = 0x0;
+  sAlarm.AlarmTime.Minutes = 0x0;
+  sAlarm.AlarmTime.Seconds = 0x0;
+  sAlarm.AlarmTime.SubSeconds = 0x0;
+  sAlarm.AlarmTime.DayLightSaving = RTC_DAYLIGHTSAVING_NONE;
+  sAlarm.AlarmTime.StoreOperation = RTC_STOREOPERATION_RESET;
+  sAlarm.AlarmMask = RTC_ALARMMASK_NONE;
+  sAlarm.AlarmSubSecondMask = RTC_ALARMSUBSECONDMASK_ALL;
+  sAlarm.AlarmDateWeekDaySel = RTC_ALARMDATEWEEKDAYSEL_DATE;
+  sAlarm.AlarmDateWeekDay = 0x1;
+  sAlarm.Alarm = RTC_ALARM_A;
+  if (HAL_RTC_SetAlarm_IT(&hrtc, &sAlarm, RTC_FORMAT_BCD) != HAL_OK)
   {
     Error_Handler();
   }
@@ -367,21 +384,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-/**
-  * @brief  Function implementing the timer callback.
-  * @param  argument: handler to the timer created.
-  * @retval None
-  */
-static void prvAutoReloadTimerCallback( TimerHandle_t xTimer )
-{
-	/*ssd1306_myname();//function from the tests.h library to display name.
-	get_time();*/
-#ifdef ssd1306_timer
-	ssd1306_myname();
-	count++;
-	ssd1306_count(count);//function from the tests.h library to display the count after 1sec and keep it updated.
-#endif
-}
+
 
 void ssd1306_time(void)
 {
@@ -395,13 +398,32 @@ void ssd1306_time(void)
 	snprintf((char*)date,sizeof(date),"%02d/%02d/%02d",gDate.Date, gDate.Month, gDate.Year);
 
 	 ssd1306_Fill(White);
-	 ssd1306_SetCursor(2,0);
-	 ssd1306_WriteString("RUNITA", Font_11x18, Black);
-	 ssd1306_SetCursor(2, 18);
+	 /*ssd1306_SetCursor(2,0);
+	 ssd1306_WriteString("RUNITA", Font_11x18, Black);*/
+	 ssd1306_SetCursor(2, 0);
 	 ssd1306_WriteString(time, Font_11x18, Black);
-     ssd1306_SetCursor(2, 36);
+     ssd1306_SetCursor(2, 18);
 	 ssd1306_WriteString(date, Font_11x18, Black);
      ssd1306_UpdateScreen();
+}
+
+/**
+  * @brief  Function implementing the interrupt callback for alarmA.
+  * @param  argument: handle to the RTC
+  * @retval None
+  */
+void HAL_RTC_AlarmAEventCallback(RTC_HandleTypeDef *hrtc)
+{
+  /* Prevent unused argument(s) compilation warning */
+  UNUSED(hrtc);
+  RTC_AlarmTypeDef gAlarm = {0};
+  HAL_RTC_GetAlarm(hrtc, &gAlarm, RTC_ALARM_A,RTC_FORMAT_BIN );
+  snprintf((char*)alarm,sizeof(alarm),"%02d:%02d:%02d", gAlarm.AlarmTime.Hours, gAlarm.AlarmTime.Minutes, gAlarm.AlarmTime.Seconds);
+  ssd1306_SetCursor(2, 36);
+  ssd1306_WriteString("ALARM", Font_11x18, Black);
+  ssd1306_SetCursor(66, 36);
+  ssd1306_WriteString(alarm, Font_11x18, Black);
+  ssd1306_UpdateScreen();
 }
 /* USER CODE END 4 */
 

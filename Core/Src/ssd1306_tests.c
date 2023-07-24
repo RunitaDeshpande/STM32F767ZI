@@ -322,7 +322,7 @@ void ssd1306_myname(){
 	 ssd1306_SetCursor(2,0);
 	 ssd1306_WriteString("RUNITA", Font_11x18, Black);
 
-	 ssd1306_UpdateScreen();
+	// ssd1306_UpdateScreen();
 
 }
 
@@ -341,20 +341,7 @@ void ssd1306_count(uint16_t count){
 	ssd1306_UpdateScreen();
 }
 
-void get_time(void)
-{
-	char time[10];
-	RTC_HandleTypeDef hrtc;
-	RTC_TimeTypeDef gTime = {0};
-	RTC_DateTypeDef gDate = {0};
-	HAL_RTC_GetTime(&hrtc,&gTime,RTC_FORMAT_BIN);
-	HAL_RTC_GetDate(&hrtc,&gDate,RTC_FORMAT_BIN);
-	snprintf((char*)time, sizeof(time), "%02d:%02d:%02d", gTime.Hours, gTime.Minutes, gTime.Seconds);
-	 ssd1306_Fill(White);
-     ssd1306_SetCursor(2, 36);
-	 ssd1306_WriteString(time, Font_11x18, Black);
-     ssd1306_UpdateScreen();
-}
+
 
 void ssd1306_TestAll() {
     //ssd1306_Init();
