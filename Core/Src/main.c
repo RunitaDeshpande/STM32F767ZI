@@ -24,6 +24,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
+#include"stdio.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -42,6 +43,8 @@
 
 /* Private variables ---------------------------------------------------------*/
 
+I2C_HandleTypeDef hi2c3;
+
 /* Definitions for defaultTask */
 osThreadId_t defaultTaskHandle;
 const osThreadAttr_t defaultTask_attributes = {
@@ -49,22 +52,20 @@ const osThreadAttr_t defaultTask_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityNormal,
 };
-/* Definitions for myTask02 */
-osThreadId_t myTask02Handle;
-const osThreadAttr_t myTask02_attributes = {
-  .name = "myTask02",
-  .stack_size = 128 * 4,
-  .priority = (osPriority_t) osPriorityHigh,
-};
 /* USER CODE BEGIN PV */
+uint32_t Address;
+uint16_t i;
 
+ const uint16_t Data=1;
+ uint16_t RData;
+ uint16_t buf[256];
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_I2C3_Init(void);
 void StartDefaultTask(void *argument);
-void StartTask02(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -103,12 +104,88 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_I2C3_Init();
   /* USER CODE BEGIN 2 */
+  	  HAL_FLASH_Unlock();
+      FLASH_Erase_Sector(5, FLASH_VOLTAGE_RANGE_3 );//erase sector 5 before programming it
+      HAL_FLASH_Lock();
 
+      HAL_FLASH_Unlock();
+      Address=0x08040000;
+      for(i=0;i<256;i++)
+      {
+      HAL_FLASH_Program(FLASH_TYPEPROGRAM_BYTE, Address, Data);//to program 256 bytes from starting of sector.
+
+      Address++;
+
+      }
+
+     Address=0x0805FFFF;
+
+           for(i=0;i<256;i++)
+                 {
+                 HAL_FLASH_Program(FLASH_TYPEPROGRAM_BYTE, Address, Data);//to write 256 bytes in the middle of the sector
+
+                 Address++;
+
+                 }
+
+     Address=0x0807FEFF;
+     for(i=0;i<256;i++)
+                      {
+                      HAL_FLASH_Program(FLASH_TYPEPROGRAM_BYTE, Address, Data);//to write the last 256 bytes of the sector
+
+                      Address++;
+
+                      }
+     HAL_FLASH_Lock();
+
+      HAL_FLASH_Unlock();
+      Address=0x08040000;
+      for(i=0;i<256;i++)
+      {
+      RData=*(__IO uint16_t *)Address;//reading the data
+      buf[i]=RData;
+      }
+      HAL_FLASH_Lock();
+      for(i=100;i<116;i++)
+      {
+      buf[i]=0x2;//modify 16 bytes of data after 100 bytes.
+      }
+      HAL_FLASH_Unlock();
+      FLASH_Erase_Sector(5, FLASH_VOLTAGE_RANGE_3 );
+      HAL_FLASH_Lock();
+      HAL_FLASH_Unlock();
+      //programming the modified data
+           Address=0x08040000;
+           for(i=0;i<256;i++)
+           {
+           HAL_FLASH_Program(FLASH_TYPEPROGRAM_BYTE, Address, buf[i]);
+           Address++;
+           }
+           Address=0x0805FFFF;
+
+           for(i=0;i<256;i++)
+                 {
+                    HAL_FLASH_Program(FLASH_TYPEPROGRAM_BYTE, Address, buf[i]);
+
+                    Address++;
+
+                 }
+           Address=0x0807FEFF;
+
+           for(i=0;i<256;i++)
+               {
+                  HAL_FLASH_Program(FLASH_TYPEPROGRAM_BYTE, Address, buf[i]);
+
+                  Address++;
+
+               }
+           HAL_FLASH_Lock();
   /* USER CODE END 2 */
 
   /* Init scheduler */
-  osKernelInitialize();
+ // osKernelInitialize();
 
   /* USER CODE BEGIN RTOS_MUTEX */
   /* add mutexes, ... */
@@ -128,10 +205,7 @@ int main(void)
 
   /* Create the thread(s) */
   /* creation of defaultTask */
-  defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
-
-  /* creation of myTask02 */
-  myTask02Handle = osThreadNew(StartTask02, NULL, &myTask02_attributes);
+ // defaultTaskHandle = osThreadNew(StartDefaultTask, NULL, &defaultTask_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
   /* add threads, ... */
@@ -142,7 +216,7 @@ int main(void)
   /* USER CODE END RTOS_EVENTS */
 
   /* Start scheduler */
-  osKernelStart();
+  //osKernelStart();
 
   /* We should never get here as control is now taken by the scheduler */
   /* Infinite loop */
@@ -164,6 +238,7 @@ void SystemClock_Config(void)
 {
   RCC_OscInitTypeDef RCC_OscInitStruct = {0};
   RCC_ClkInitTypeDef RCC_ClkInitStruct = {0};
+  RCC_PeriphCLKInitTypeDef PeriphClkInitStruct = {0};
 
   /** Configure the main internal regulator output voltage
   */
@@ -193,6 +268,58 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+  PeriphClkInitStruct.PeriphClockSelection = RCC_PERIPHCLK_I2C3;
+  PeriphClkInitStruct.I2c3ClockSelection = RCC_I2C3CLKSOURCE_PCLK1;
+  if (HAL_RCCEx_PeriphCLKConfig(&PeriphClkInitStruct) != HAL_OK)
+  {
+    Error_Handler();
+  }
+}
+
+/**
+  * @brief I2C3 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_I2C3_Init(void)
+{
+
+  /* USER CODE BEGIN I2C3_Init 0 */
+
+  /* USER CODE END I2C3_Init 0 */
+
+  /* USER CODE BEGIN I2C3_Init 1 */
+
+  /* USER CODE END I2C3_Init 1 */
+  hi2c3.Instance = I2C3;
+  hi2c3.Init.Timing = 0x00303D5B;
+  hi2c3.Init.OwnAddress1 = 0;
+  hi2c3.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c3.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c3.Init.OwnAddress2 = 0;
+  hi2c3.Init.OwnAddress2Masks = I2C_OA2_NOMASK;
+  hi2c3.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c3.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c3) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Configure Analogue filter
+  */
+  if (HAL_I2CEx_ConfigAnalogFilter(&hi2c3, I2C_ANALOGFILTER_ENABLE) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /** Configure Digital filter
+  */
+  if (HAL_I2CEx_ConfigDigitalFilter(&hi2c3, 0) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN I2C3_Init 2 */
+
+  /* USER CODE END I2C3_Init 2 */
+
 }
 
 /**
@@ -206,12 +333,14 @@ static void MX_GPIO_Init(void)
 
   /* GPIO Ports Clock Enable */
   __HAL_RCC_GPIOB_CLK_ENABLE();
+  __HAL_RCC_GPIOC_CLK_ENABLE();
+  __HAL_RCC_GPIOA_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, gled_Pin|rled_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(GPIOB, gled_Pin|rled_Pin|bled_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pins : gled_Pin rled_Pin */
-  GPIO_InitStruct.Pin = gled_Pin|rled_Pin;
+  /*Configure GPIO pins : gled_Pin rled_Pin bled_Pin */
+  GPIO_InitStruct.Pin = gled_Pin|rled_Pin|bled_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -240,25 +369,6 @@ void StartDefaultTask(void *argument)
 	  HAL_Delay(500);
   }
   /* USER CODE END 5 */
-}
-
-/* USER CODE BEGIN Header_StartTask02 */
-/**
-* @brief Function implementing the myTask02 thread.
-* @param argument: Not used
-* @retval None
-*/
-/* USER CODE END Header_StartTask02 */
-void StartTask02(void *argument)
-{
-  /* USER CODE BEGIN StartTask02 */
-  /* Infinite loop */
-  while(1)
-  {
-	  HAL_GPIO_TogglePin(rled_GPIO_Port, rled_Pin);
-	  vTaskDelay(100);
-  }
-  /* USER CODE END StartTask02 */
 }
 
 /**
